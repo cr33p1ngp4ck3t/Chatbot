@@ -1,113 +1,69 @@
-// pages/index.js
-import { useState } from 'react'
+"use client";
+import { useState } from "react";
 
 export default function Home() {
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('');
-  const [model, setModel] = useState('gpt-4o')
-  const [rateLimitInfo, setRateLimitInfo] = useState({ minute: 5, day: 50 })
+  const [userMessage, setUserMessage] = useState("");
+  const [chatResponse, setChatResponse] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const models = [
-    { name: 'GPT-4o', key: 'gpt-4o', limits: { minute: 5, day: 50 } },
-    { name: 'LLaMA 3.3 70B', key: 'llama-3.3-70b', limits: { minute: 10, day: 100 } },
-    { name: 'LLaMA 3.2 90B', key: 'llama-3.2-90b', limits: { minute: 10, day: 100 } },
-  ]
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return
-
-    const userMessage = { role: 'user', content: input }
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-
+  const handleSendMessage = async () => {
+    if (!userMessage) return;
+  
+    setLoading(true);
+    setChatResponse(""); // Clear previous response
+  
     try {
-      const response = await fetch('https://api.nexusmind.tech/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer your_key',
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
-          model: model,
-          stream: false,
+          model: "gpt-4o", // Model to use
+          messages: [
+            {'role': 'system',
+            'content': "You are ChatGPT, a large language model trained by OpenAI.\nCarefully heed the user's instructions. \nRespond using Markdown."},
+            { role: "user", content: userMessage }
+          ],
+          stream: true,
         }),
       });
-
+  
       const data = await response.json();
-      const botMessage = { role: 'assistant', content: data.reply };
-      setMessages((prev) => [...prev, botMessage]);
+  
+      console.log("API Response:", data); 
+
+      if (response.ok) {
+        const botMessage = data.choices?.[0]?.message?.content || "No response found";
+        setChatResponse(botMessage);
+      } else {
+        setChatResponse(`Error: ${data.error || "Failed to fetch response"}`);
+      }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error fetching chatbot response:", error);
+      setChatResponse("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <div className="p-4 bg-blue-600 text-white text-center">
-        <h1 className="text-2xl font-bold">Chat with AI</h1>
+    <div className="flex flex-col justify-end w-screen h-screen overflow-hidden content-center text-center">
+      <div>
+        <p>{chatResponse}</p>
       </div>
-      
-      {/* Model Selector */}
-      <div className="p-4 bg-white border-b flex justify-between items-center">
-        <select
-          value={model}
-          onChange={(e) => {
-            const selectedModel = models.find(m => m.key === e.target.value);
-            setModel(selectedModel.key);
-            setRateLimitInfo(selectedModel.limits);
-          }}
-          className="border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {models.map((m) => (
-            <option key={m.key} value={m.key}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-        <div>
-          <p className="text-sm text-gray-600">
-            Minute: {rateLimitInfo.minute}, Day: {rateLimitInfo.day}
-          </p>
-        </div>
-      </div>
-
-      {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`mb-4 p-3 rounded-lg max-w-lg ${
-              msg.role === 'user'
-                ? 'bg-blue-500 text-white self-end'
-                : 'bg-gray-200 text-gray-800 self-start'
-            }`}
-          >
-            {msg.content}
-          </div>
-        ))}
-      </div>
-
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-4 bg-white border-t">
-        <div className="flex items-center">
+      <div className="p-6 flex gap-4">
+        <div className="flex-1">
           <input
-            type="text"
-            className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="ml-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-          >
-            Send
-          </button>
+            value={userMessage}
+            onChange={(e) => setUserMessage(e.target.value)}
+            placeholder="Type your message here..."
+            className="text-black w-full h-16 border-none"
+          ></input>
         </div>
-      </form>
+        <button onClick={handleSendMessage} disabled={loading} 
+        className="bg-white text-black border-slate-400 border-2 h-16 p-4">
+          {loading ? "Loading..." : "Send Message"}
+        </button>
+      </div>
     </div>
   );
 }
