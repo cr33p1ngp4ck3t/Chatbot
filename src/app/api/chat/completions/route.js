@@ -13,15 +13,14 @@ export async function POST(req) {
       messages: [
         {
           role: 'system',
-          content: "You are ChatGPT, a large language model trained by OpenAI.\nCarefully heed the user's instructions.\nRespond using Markdown.",
+          content: "\nCarefully heed the user's instructions.\nRespond using Markdown.",
         },
         ...body.messages, // Include messages from the incoming request
       ],
       model: body.model || 'gpt-4o', // Default model if not provided
-      stream: body.stream || true, // Optional: Allow streaming
+      stream: body.stream, // Optional: Allow streaming
     };
 
-    // Make the POST request to the external API
     const response = await fetch('https://api.nexusmind.tech/v1/chat/completions', {
       method: 'POST',
       headers,
