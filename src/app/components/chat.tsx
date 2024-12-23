@@ -1,10 +1,13 @@
+"use client"
 /* eslint-disable @next/next/no-img-element */
-"use client";
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
 import Header from "../components/nav";
+import Models from './models';
 
 type ChatMessage = {
-  role: "user" | "bot"; // Role of the message sender
+  role: "user" | "bot" // Role of the message sender
   content: string; // The actual message content
 };
 
@@ -18,84 +21,110 @@ export default function ChatBot() {
   const [userMessage, setUserMessage] = useState(""); // User's input
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // Stores the entire chat history
   const [loading, setLoading] = useState(false); // Loading state
+  const [selectedModel, setSelectedModel] = useState("gpt-4o"); // Default model
 
   const handleSendMessage = async () => {
     if (!userMessage) return;
-
+    
+    console.log(`Selected Model ${selectedModel}`)
     setLoading(true);
 
+    // Immediately add user message to chat history
+    setChatHistory(prevHistory => [...prevHistory, { role: "user", content: userMessage }]);
+    
+    // Clear user input immediately
+    setUserMessage("");
+
     try {
-      const response = await fetch("../api/chat/completions", {
+      const response = await fetch("/api/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          model: "gpt-4o", // Model to use
           messages: [{ role: "user", content: userMessage }],
-          stream: false,
+          model: selectedModel,
         }),
       });
 
       const data = await response.json();
 
-      console.log("API Response:", data); // Log API response
-
       if (response.ok) {
-        const botMessage = data.choices?.[0]?.message?.content || "No response found";
-
-        // Append user and bot messages to the chat history
-        setChatHistory((prevHistory) => [
-          ...prevHistory,
-          { role: "user", content: userMessage },
-          { role: "bot", content: botMessage },
-        ]);
-
-        // Clear user input
-        setUserMessage("");
+        const botMessage = data.choices?.[0]?.message?.content || "No response found"
+        
+        // Add only the bot's message to chat history
+        setChatHistory(prevHistory => [...prevHistory, { role: "bot", content: botMessage }]);
       } else {
-        console.error("Error Response:", data);
+        console.error("Response:", data)
+        // Add error message to chat
+        setChatHistory(prevHistory => [...prevHistory, { role: "bot", content: "Sorry, I encountered an error. Please try again." }]);
       }
     } catch (error) {
-      console.error("Error fetching chatbot response:", error);
+      console.error("Error fetching chatbot response:", error)
+      // Add error message to chat
+      setChatHistory(prevHistory => [...prevHistory, { role: "bot", content: "Sorry, I encountered an error. Please try again." }]);
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <>
       <div className="flex flex-col justify-between h-full">
-        <Header />
-        <div className="flex flex-col justify-end overflow-x-hidden items-center w-full">
-          <div className="w-2/3 m-8 flex flex-col gap-6 overflow-y-auto ">
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-700">
+          <Header />
+          {/* Model Selection Dropdown */}
+          <Models value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} />
+        </div>
+        <div className="flex flex-col justify-end overflow-x-hidden items-center ">
+          <div className="w-2/3 py-2 flex flex-col gap-6 overflow-y-auto ">
             {/* Display Chat History */}
-            <div className="w-full rounded-2xl flex flex-col justify-end p-4 ">
-              {chatHistory.length > 0 ? (
-                chatHistory.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`p-2 flex flex-col gap-3  ${
-                      message.role === "user" ? "text-blue-400 text-right bg-slate-600" : "text-white text-left"
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                ))
-              ) : (
-                <p className="text-white">Start chatting with GalantAI!</p>
-              )}
-            </div>
+              <div className={`w-full rounded-2xl flex flex-col p-4 gap-4 items-end 
+              `}>
+                {chatHistory.length > 0 ? (
+                  chatHistory.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`${
+                        message.role === "user"
+                          ? "text-white bg-slate-600 rounded-lg py-4 px-4 max-w-[66%] w-fit "
+                          : "text-white text-left py-4 px-4 w-full"
+                      }`}
+                    >
+                      <div>
+                        {message.role === "user" ? (
+                          <div className="">
+                              <div className="text-white">{message.content}</div>
+                          </div>
+                        ) : (
+                          <div className="">
+                              <ReactMarkdown className="text-white">{message.content}</ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p></p>
+                )}
+              </div>
 
             {/* Input and Send Button */}
-            <div className="p-6 flex gap-4 flex-col rounded-2xl bg-slate-600">
-              <div className="flex-1 sticky bottom-0">
-                <input
+            <div className=" flex flex-col rounded-2xl bg-slate-600 sticky bottom-0 w-full">
+              <div className="flex-1">
+              <textarea
                   value={userMessage}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      handleSendMessage();
+                    }
+                  }}
                   onChange={(e) => setUserMessage(e.target.value)}
                   placeholder="Message GalantAI"
-                  className="text-white w-full h-8 border-none p-4 bg-transparent focus:outline-none focus:border-none"
-                ></input>
+                  className="text-white w-full h-10 border-none pt-4 px-6 bg-transparent focus:outline-none focus:border-none resize-none"
+                />
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end pb-2 px-4">
                 <button
                   onClick={handleSendMessage}
                   disabled={loading}
@@ -109,5 +138,5 @@ export default function ChatBot() {
         </div>
       </div>
     </>
-  );
+  )
 }

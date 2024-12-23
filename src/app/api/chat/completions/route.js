@@ -5,7 +5,7 @@ export async function POST(req) {
 
     // Define the headers and request payload
     const headers = {
-      Authorization: 'Bearer nxdevtest', // Replace 'your_key' with the actual API key
+      Authorization: `Bearer ${process.env.BEARER_KEY}`, // Replace 'your_key' with the actual API key
       'Content-Type': 'application/json',
     };
 
@@ -17,7 +17,7 @@ export async function POST(req) {
         },
         ...body.messages, // Include messages from the incoming request
       ],
-      model: body.model || 'gpt-4o', // Default model if not provided
+      model: body.model, // Default model if not provided
       stream: body.stream, // Optional: Allow streaming
     };
 
@@ -30,6 +30,7 @@ export async function POST(req) {
     // Parse and return the response from the external API
     if (response.ok) {
       const responseData = await response.json();
+      console.log(`Model: ${body.model}`);
       return new Response(JSON.stringify(responseData), {
         headers: { 'Content-Type': 'application/json' },
         status: 200,

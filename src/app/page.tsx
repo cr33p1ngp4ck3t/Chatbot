@@ -7,12 +7,10 @@ export default function Home() {
   return (
     <>
       <div className="w-full flex">
-        {/* Side bar */}
-        <div className="h-screen ">
+        {/* Side bar */}        
           <Sidebar />
-        </div>          
         {/* Chat area */}
-        <div className="h-screen flex-[3] w-max">
+        <div className="h-screen flex-[3] w-full">
           <ChatBot />
         </div>
       </div>
