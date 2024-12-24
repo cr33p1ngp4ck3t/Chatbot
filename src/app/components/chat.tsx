@@ -1,10 +1,12 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
+// eslint-disable react/no-unescaped-entities 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
 import Header from "../components/nav";
 import Models from './models';
+import { useSession, signIn } from "next-auth/react";
 
 type ChatMessage = {
   role: "user" | "bot" // Role of the message sender
@@ -18,12 +20,18 @@ const arrowUp = (
 );
 
 export default function ChatBot() {
+  const { data: session } = useSession();
   const [userMessage, setUserMessage] = useState(""); // User's input
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // Stores the entire chat history
   const [loading, setLoading] = useState(false); // Loading state
   const [selectedModel, setSelectedModel] = useState("gpt-4o"); // Default model
 
   const handleSendMessage = async () => {
+    if (!session) {
+      signIn();
+      return;
+    }
+
     if (!userMessage) return;
     
     console.log(`Selected Model ${selectedModel}`)
@@ -68,9 +76,24 @@ export default function ChatBot() {
     }
   }
 
+  if (!session) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-slate-900">
+        <h1 className="text-2xl font-bold text-white mb-4">Please sign in to use the chat</h1>
+        <button
+          onClick={() => signIn()}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          Sign In
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col justify-between h-full">
+        {/* Header Area */}
         <div className="flex items-center justify-between px-4 py-2 bg-slate-700">
           <Header />
           {/* Model Selection Dropdown */}
